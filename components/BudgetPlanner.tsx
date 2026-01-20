@@ -14,17 +14,13 @@ const BudgetChart: React.FC<BudgetChartProps> = ({ items, currency, exchangeRate
     const currentSymbol = currencySymbols[currency];
     const rate = exchangeRates[currency];
 
-    // FIX: Explicitly type the accumulator and the return type of the reduce callback to ensure
-    // TypeScript correctly infers `byCategory` as `Record<string, number>`, resolving
-    // 'unknown' type errors in subsequent arithmetic operations.
-    const byCategory = items.reduce((acc: Record<string, number>, item): Record<string, number> => {
-        // Use nullish coalescing operator `??` for clarity, ensuring acc[item.category] is a number before addition.
-        acc[item.category] = (acc[item.category] ?? 0) + item.amount;
+    const byCategory = items.reduce((acc, item) => {
+        const cat = item.category;
+        acc[cat] = (acc[cat] || 0) + item.amount;
         return acc;
-    }, {}); // Initial value is an empty object, type inferred from the callback's return.
+    }, {} as Record<string, number>);
 
-    // `total` will now be correctly inferred as `number` because `byCategory` values are `number`.
-    const total = Object.values(byCategory).reduce((sum, val) => sum + val, 0);
+    const total = Object.values(byCategory).reduce((sum: number, val: number) => sum + val, 0);
 
     if (total === 0) {
         return <div className="text-center text-slate-500 dark:text-slate-400 py-8">Add some expenses to see your budget breakdown.</div>;
@@ -38,9 +34,11 @@ const BudgetChart: React.FC<BudgetChartProps> = ({ items, currency, exchangeRate
     return (
         <div className="space-y-4">
             {Object.entries(byCategory).map(([category, amountInUSD]) => {
-                // `total` and `amountInUSD` are now correctly typed as `number` due to `byCategory`'s type definition.
-                const width = total > 0 ? (amountInUSD / total) * 100 : 0;
-                const displayAmount = (amountInUSD * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const numAmount = amountInUSD as number;
+                const numTotal = total as number;
+                
+                const width = numTotal > 0 ? (numAmount / numTotal) * 100 : 0;
+                const displayAmount = (numAmount * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 return (
                     <div key={category} className="w-full">
                         <div className="flex justify-between items-center mb-1">

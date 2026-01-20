@@ -1,8 +1,8 @@
 
-
 export interface Activity {
     id: string;
-    time: string;
+    time: string; // Used as Start Time
+    duration?: number; // Duration in hours
     description: string;
     category: string;
     notes: string;
