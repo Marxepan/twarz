@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import type { Itinerary, Day, Activity } from '../types';
@@ -13,6 +14,10 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({ itinerary, setItine
     const [collapsedDays, setCollapsedDays] = useState<{ [key: number]: boolean }>({});
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+
+    // State for editing day headers
+    const [editingDayId, setEditingDayId] = useState<number | null>(null);
+    const [editingDayTheme, setEditingDayTheme] = useState<string>("");
 
     useEffect(() => {
         const handlePdfStart = () => setCollapsedDays({});
@@ -123,6 +128,29 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({ itinerary, setItine
         setCollapsedDays(newCollapsedState);
     };
 
+    // Day Header Editing Logic
+    const handleStartEditingDay = (day: Day, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingDayId(day.day);
+        setEditingDayTheme(day.theme);
+    };
+
+    const handleSaveDayTheme = (dayIndex: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!itinerary) return;
+        const newItinerary = JSON.parse(JSON.stringify(itinerary));
+        newItinerary[dayIndex].theme = editingDayTheme;
+        setItinerary(newItinerary);
+        setEditingDayId(null);
+        setEditingDayTheme("");
+    };
+
+    const handleCancelDayEdit = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingDayId(null);
+        setEditingDayTheme("");
+    };
+
     return (
         <DragDropContext onDragEnd={handleOnDragEnd}>
             <section id="itinerary-content" className="space-y-6 animate-fade-in">
@@ -136,12 +164,52 @@ const ItinerarySection: React.FC<ItinerarySectionProps> = ({ itinerary, setItine
                 </div>
                 {itinerary.map((day, dayIndex) => (
                     <div key={day.day} className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden printable-day-container">
-                        <div className="day-header p-5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center cursor-pointer" onClick={() => toggleDayCollapse(day.day)}>
-                            <div>
-                                <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-400">Day {day.day}: <span className="text-slate-800 dark:text-slate-100">{day.theme}</span></h3>
+                        <div className="day-header p-5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center cursor-pointer group" onClick={() => toggleDayCollapse(day.day)}>
+                            <div className="flex-grow">
+                                {editingDayId === day.day ? (
+                                    <div className="flex items-center gap-2 mr-4" onClick={e => e.stopPropagation()}>
+                                        <span className="text-xl font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">Day {day.day}:</span>
+                                        <input 
+                                            type="text" 
+                                            value={editingDayTheme}
+                                            onChange={(e) => setEditingDayTheme(e.target.value)}
+                                            className="flex-grow px-2 py-1 text-lg font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-700 border border-indigo-300 dark:border-indigo-500 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveDayTheme(dayIndex, e as any);
+                                                if (e.key === 'Escape') handleCancelDayEdit(e as any);
+                                            }}
+                                        />
+                                        <div className="flex items-center gap-1">
+                                            <button 
+                                                onClick={(e) => handleSaveDayTheme(dayIndex, e)}
+                                                className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded text-xs font-bold hover:bg-green-200 dark:hover:bg-green-800"
+                                            >
+                                                SAVE
+                                            </button>
+                                            <button 
+                                                onClick={(e) => handleCancelDayEdit(e)}
+                                                className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-2 py-1 rounded text-xs font-bold hover:bg-red-200 dark:hover:bg-red-800"
+                                            >
+                                                CANCEL
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-400">Day {day.day}: <span className="text-slate-800 dark:text-slate-100">{day.theme}</span></h3>
+                                        <button 
+                                            onClick={(e) => handleStartEditingDay(day, e)}
+                                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded printable-hide"
+                                            title="Edit Day Theme"
+                                        >
+                                            <EditIcon />
+                                        </button>
+                                    </div>
+                                )}
                                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{day.date}</p>
                             </div>
-                            <div className={`transition-transform duration-300 ${collapsedDays[day.day] ? '' : 'rotate-180'}`}><ChevronDownIcon /></div>
+                            <div className={`transition-transform duration-300 ${collapsedDays[day.day] ? '' : 'rotate-180'} ml-4 flex-shrink-0`}><ChevronDownIcon /></div>
                         </div>
                         {!collapsedDays[day.day] && (
                             <>

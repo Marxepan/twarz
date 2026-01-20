@@ -214,8 +214,27 @@ function App() {
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!destination || !startDate || !endDate) {
-            setError("Please fill in all required fields.");
+            setError("Please fill in all required fields, you lazy bum.");
             return;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Simple validation to prevent stupidity
+        if (end < start) {
+            setError("End date is before start date. Time travel hasn't been invented yet, moron.");
+            return;
+        }
+
+        // Calculate the number of days (inclusive)
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (diffDays > 60) {
+            if(!window.confirm("You want to plan a trip longer than 60 days? You know you'll get bored or run out of money. Are you sure?")) {
+                return;
+            }
         }
 
         setIsLoading(true);
@@ -227,19 +246,74 @@ function App() {
 
         setTimeout(() => {
             try {
-                const planWithIds = polishedTemplate.itinerary.map(day => ({
-                    ...day,
-                    activities: day.activities.map((activity, index) => ({
-                        ...activity,
-                        id: `activity-${day.day}-${index}-${new Date().getTime()}`
-                    }))
-                }));
-                setItinerary(planWithIds);
+                const generatedItinerary: Itinerary = [];
+                const templateLength = polishedTemplate.itinerary.length;
+
+                for (let i = 0; i < diffDays; i++) {
+                    // Calculate exact date for this day
+                    const currentDate = new Date(start);
+                    currentDate.setDate(start.getDate() + i);
+                    
+                    // Format date nicely (e.g., October 15, 2024)
+                    const dateString = currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    
+                    if (i < templateLength) {
+                        // We have a template for this day
+                        const templateDay = polishedTemplate.itinerary[i];
+                        generatedItinerary.push({
+                            ...templateDay,
+                            day: i + 1,
+                            date: dateString, // Overwrite template date with calculated date
+                            activities: templateDay.activities.map((activity, index) => ({
+                                ...activity,
+                                id: `activity-${i + 1}-${index}-${Date.now()}` // Unique IDs
+                            }))
+                        });
+                    } else {
+                        // We ran out of template, generate generic "Extra Day" content
+                        generatedItinerary.push({
+                            day: i + 1,
+                            date: dateString,
+                            theme: `Day ${i + 1}: Unplanned Adventure`,
+                            activities: [
+                                { 
+                                    id: `activity-${i + 1}-0-${Date.now()}`, 
+                                    time: "Morning", 
+                                    description: "Recover from previous night's mistakes", 
+                                    category: "Relaxation", 
+                                    notes: "Drink water.", 
+                                    link: "", 
+                                    photo: null 
+                                },
+                                { 
+                                    id: `activity-${i + 1}-1-${Date.now()}`, 
+                                    time: "Afternoon", 
+                                    description: "Wander aimlessly around " + destination, 
+                                    category: "Sightseeing", 
+                                    notes: "Try not to get lost.", 
+                                    link: "", 
+                                    photo: null 
+                                },
+                                { 
+                                    id: `activity-${i + 1}-2-${Date.now()}`, 
+                                    time: "Evening", 
+                                    description: "Find cheap food and contemplate life choices", 
+                                    category: "Food", 
+                                    notes: "", 
+                                    link: "", 
+                                    photo: null 
+                                }
+                            ]
+                        });
+                    }
+                }
+
+                setItinerary(generatedItinerary);
                 setBudgetItems(defaultBudgetItems);
                 setContacts(defaultContacts);
             } catch (err) {
                 console.error(err);
-                setError("An unexpected error occurred while generating the plan from the template.");
+                setError("An unexpected error occurred while generating the plan. You probably broke it.");
             } finally {
                 setIsLoading(false);
             }
