@@ -50,6 +50,9 @@ function App() {
     const [importDataString, setImportDataString] = useState('');
     const [showPublicShareLinkModal, setShowPublicShareLinkModal] = useState(false); // Re-added state
     const [publicShareUrl, setPublicShareUrl] = useState(''); // Re-added state
+    
+    // Offline status state
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     // State Management with localStorage
     const loadState = <T,>(key: string, defaultValue: T): T => {
@@ -85,6 +88,20 @@ function App() {
             localStorage.setItem('theme', 'light');
         }
     }, [theme]);
+
+    // Effect for Online/Offline status
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
     
     // Effect for sticky header
     useEffect(() => {
@@ -516,6 +533,8 @@ function App() {
                     {destination} ({startDate} - {endDate})
                 </h2>
                 <div className="flex items-center gap-4">
+                     {/* Offline Indicator in Header */}
+                     {!isOnline && <span className="text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded shadow animate-pulse">OFFLINE</span>}
                     <button onClick={handleSaveTrip} className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white text-sm px-4 py-2 rounded-md transition-colors">Save Trip</button>
                     {itinerary && (
                         <button onClick={() => generatePdf(itinerary)} disabled={isGeneratingPdf} className="flex-shrink-0 bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -623,7 +642,13 @@ function App() {
         <div className="font-sans">
             <StickyHeader />
             <div className="p-4 sm:p-6 lg:p-8">
-                <div className='absolute top-4 right-4 printable-hide z-50'>
+                <div className='absolute top-4 right-4 printable-hide z-50 flex items-center gap-3'>
+                    {!isOnline && (
+                        <div className="bg-amber-500 text-white px-3 py-1.5 rounded-full shadow-lg text-xs font-bold animate-pulse flex items-center gap-1">
+                            <span className="w-2 h-2 bg-white rounded-full"></span>
+                            OFFLINE MODE
+                        </div>
+                    )}
                     <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
                 <main className="max-w-7xl mx-auto">
@@ -632,7 +657,7 @@ function App() {
                             <span className="text-green-500">Awesome</span> <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">Travel Planner</span>
                         </h1>
                         <p className="mt-4 max-w-2xl mx-auto text-lg text-slate-600 dark:text-slate-400">
-                            Plan your perfect trip instantly. Start with our curated Tokyo template to get going.
+                            Plan your trips manually because you have no friends to do it for you.
                         </p>
                     </header>
                     <div id='generation-form' className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 mb-10 printable-hide">
